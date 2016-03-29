@@ -1,0 +1,125 @@
+SHC stands for shell script compiler.
+
+1. Download shc and install it
+
+Download shc and install it as shown below.
+
+# wget http://www.datsi.fi.upm.es/~frosal/sources/shc-3.8.7.tgz
+# tar xvfz shc-3.8.7.tgz
+# cd shc-3.8.7
+# make
+Verify that shc is installed properly.
+
+$ ./shc -v
+shc parse(-f): No source file specified
+
+shc Usage: shc [-e date] [-m addr] [-i iopt] [-x cmnd] [-l lopt] [-rvDTCAh] -f script
+2. Create a Sample Shell Script
+
+Create a sample bash shell script that you like to encrypt using shc for testing purpose.
+
+For testing purpose, let us create the following random.sh shell script which generates random numbers. You have to specify how many random numbers you like to generate.
+
+
+ 
+$ vi random.sh
+#!/bin/bash
+
+echo -n "How many random numbers do you want to generate? "
+read max
+
+for (( start = 1; start <= $max; start++ ))
+do
+  echo -e $RANDOM
+done
+
+$ ./random.sh
+How many random numbers do you want to generate? 3
+24682
+1678
+491
+3. Encrypt the Shell Script Using shc
+
+Encrypt the random.sh shell scripting using shc as shown below.
+
+$ ./shc -f random.sh
+This will create the following two files:
+
+$ ls -l random.sh*
+-rwxrw-r--. 1 ramesh ramesh   149 Mar 27 01:09 random.sh
+-rwx-wx--x. 1 ramesh ramesh 11752 Mar 27 01:12 random.sh.x
+-rw-rw-r--. 1 ramesh ramesh 10174 Mar 27 01:12 random.sh.x.c
+random.sh is the original unencrypted shell script
+random.sh.x is the encrypted shell script in binary format
+random.sh.x.c is the C source code of the random.sh file. This C source code is compiled to create the above encrypted random.sh.x file. The whole logic behind the shc is to convert the random.sh shell script to random.sh.x.c C program (and of course compile that to generate the random.sh.x executable)
+$ file random.sh
+random.sh: Bourne-Again shell script text executable
+
+$ file random.sh.x
+random.sh.x: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.18, stripped
+
+$ file random.sh.x.c
+random.sh.x.c: ASCII C program text
+4. Execute the Encrypted Shell Script
+
+Now, let us execute the encrypted shell script to make sure it works as expected.
+
+$ ./random.sh.x
+How many random numbers do you want to generate? 3
+7489
+10494
+29627
+Please note that the binary itself is still dependent on the shell (the first line provided in the random.sh. i.e /bin/bash) to be available to execute the script.
+
+5. Specifying Expiration Date for Your Shell Script
+
+Using shc you can also specify an expiration date. i.e After this expiration date when somebody tries to execute the shell script, they'll get an error message.
+
+Let us say that you don't want anybody to execute the random.sh.x after 31-Dec-2011 (I used last year date for testing purpose).
+
+Create a new encrypted shell script using "shc -e" option to specify expiration date. The expiration date is specified in the dd/mm/yyyy format.
+
+$ ./shc -e 31/12/2011 -f random.sh
+In this example, if someone tries to execute the random.sh.x, after 31-Dec-2011, they'll get a default expiration message as shown below.
+
+$ ./random.sh.x
+./random.sh.x: has expired!
+Please contact your provider
+If you like to specify your own custom expiration message, use -m option (along with -e option as shown below).
+
+$ ./shc -e 31/12/2011 -m "Contact purval.patel@enjayworld.com for new version of this script" -f random.sh
+
+$ ./random.sh.x
+./random.sh.x: has expired!
+Contact purval.patel@enjayworld.com for new version of this script
+6. Create Redistributable Encrypted Shell Scripts
+
+Apart from -e, and -m (for expiration), you can also use the following options:
+
+-r will relax security to create a redistributable binary that executes on other systems that runs the same operating system as the one on which it was compiled.
+-T will allow the created binary files to be traceable using programs like strace, ltrace, etc.
+-v is for verbose
+Typically you might want to use both -r and -T option to craete a redistributable and tracable shell encrypted 
+shell script as shown below.
+
+$ ./shc -v -r -T -f random.sh
+shc shll=bash
+shc [-i]=-c
+shc [-x]=exec '%s' "$@"
+shc [-l]=
+shc opts=
+shc: cc  random.sh.x.c -o random.sh.x
+shc: strip random.sh.x
+shc: chmod go-r random.sh.x
+
+$ ./random.sh.x
+How many random numbers do you want to generate? 3
+28954
+1410
+15234
+Finally, it is worth repeating again: You should not be encrypting your shell script in the first place. 
+But, if you decided to encrypt your shell script using shc, please remember that a smart person can still 
+generate the original shell script from the encrypted binary that was created by shc.
+
+thank you,
+Purval patel
